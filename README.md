@@ -1,0 +1,1 @@
+This mod improves movement and combat, and also adds new mechanics not only for players but also for mobs. Overall, the mod features: weapon blocking, dual-style combat, dodging mechanics, wall-climbing mechanics, and the ability to drag chests, workbenches and similar blocks containing items.
