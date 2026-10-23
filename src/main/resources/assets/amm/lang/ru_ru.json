@@ -1,0 +1,16 @@
+{
+  "key.category.amm.main": "Alex Movements Mod",
+  "key.amm.crawl": "Ползти (удерживать вместе с приседанием)",
+  "amm.dual.combo.start": "Двойное комбо! Скорость атаки повышена",
+  "amm.dual.combo.end": "Двойное комбо потеряно",
+  "amm.tooltip.block_chance": "Шанс блока: %s%%",
+  "amm.tooltip.block_chance_dual": "Шанс блока двумя оружиями: %s%%",
+  "amm.tooltip.block_chance_projectile": "Шанс блока снарядов двумя оружиями: %s%%",
+  "amm.riposte.start": "Рипост! +%s%% к урону",
+  "amm.tooltip.riposte": "Рипост: следующий удар в течение %2$s с после блока наносит на %1$s%% больше урона (одним оружием, без щита)",
+  "amm.configuration.title": "Alex Movements Mod",
+  "key.amm.sit": "Сесть",
+  "key.amm.carry": "Нести моба (удерживать + правая кнопка мыши)",
+  "key.amm.gesture": "Жест (+Атака = вращение, отдельно = указать)",
+  "amm.quickbreak.tooltip.loaded": "Содержит предметы"
+}

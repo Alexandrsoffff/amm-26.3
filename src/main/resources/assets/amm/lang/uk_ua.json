@@ -1,0 +1,16 @@
+{
+  "key.category.amm.main": "Alex Movements Mod",
+  "key.amm.crawl": "Повзання (тримати з Sneak)",
+  "amm.dual.combo.start": "Дуал-комбо! Швидкість атаки підвищено",
+  "amm.dual.combo.end": "Дуал-комбо втрачено",
+  "amm.tooltip.block_chance": "Шанс блоку: %s%%",
+  "amm.tooltip.block_chance_dual": "Шанс блоку в дуалі: %s%%",
+  "amm.tooltip.block_chance_projectile": "Шанс блоку снарядів у дуалі: %s%%",
+  "amm.riposte.start": "Ріпост! +%s%% шкоди",
+  "amm.tooltip.riposte": "Ріпост: наступний удар протягом %2$s с після блоку завдає +%1$s%% шкоди (соло, без щита)",
+  "amm.configuration.title": "Alex Movements Mod",
+  "key.amm.sit": "Сісти",
+  "key.amm.carry": "Нести моба (тримати + ПКМ)",
+  "key.amm.gesture": "Жест (+Атака = крутити, окремо = вказати)",
+  "amm.quickbreak.tooltip.loaded": "Містить предмети"
+}

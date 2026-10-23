@@ -1,0 +1,16 @@
+{
+  "key.category.amm.main": "Alex Movements Mod",
+  "key.amm.crawl": "Crawl (hold with Sneak)",
+  "amm.dual.combo.start": "Dual combo! Attack speed increased",
+  "amm.dual.combo.end": "Dual combo lost",
+  "amm.tooltip.block_chance": "Block chance: %s%%",
+  "amm.tooltip.block_chance_dual": "Dual block chance: %s%%",
+  "amm.tooltip.block_chance_projectile": "Dual projectile block chance: %s%%",
+  "amm.riposte.start": "Riposte! +%s%% damage",
+  "amm.tooltip.riposte": "Riposte: your next hit within %2$s s after a block deals +%1$s%% damage (solo, no shield)",
+  "amm.configuration.title": "Alex Movements Mod",
+  "key.amm.sit": "Sit down",
+  "key.amm.carry": "Carry mob (hold + right-click)",
+  "key.amm.gesture": "Gesture (+Attack = twirl, alone = point)",
+  "amm.quickbreak.tooltip.loaded": "Contains items"
+}
