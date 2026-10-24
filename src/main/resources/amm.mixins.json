@@ -5,8 +5,11 @@
   "minVersion": "0.8",
   "client": [
     "HumanoidModelMixin",
+    "IllagerModelMixin",
     "LivingEntityRenderStateMixin",
-    "LivingEntityRendererMixin"
+    "LivingEntityRendererMixin",
+    "VillagerModelMixin",
+    "WitchModelMixin"
   ],
   "injectors": {
     "defaultRequire": 1

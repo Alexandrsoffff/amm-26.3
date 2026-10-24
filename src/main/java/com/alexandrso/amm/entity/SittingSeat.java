@@ -24,6 +24,8 @@ import net.minecraft.world.level.storage.ValueInput;
 import net.minecraft.world.level.storage.ValueOutput;
 import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.shapes.VoxelShape;
+import net.minecraft.world.entity.ai.memory.MemoryModuleType;
+import net.minecraft.world.entity.schedule.Activity;
 
 /**
  * Invisible seat. Players sit on it with G; idle mobs (skeletons, illagers, villagers, witches -
@@ -53,6 +55,24 @@ public class SittingSeat extends Entity {
     /** Who may sit down is decided by the KIND of mob: skeletons (all variants), illagers, villagers, witches. Zombies never sit. */
     public static boolean isSittingKind(Mob mob) {
         return mob.is(net.minecraft.tags.EntityTypeTags.SKELETONS) || SMALL_SITTERS.contains(mob.getType());
+    }
+    /**
+     * A villager that is doing something: trading, asleep, on its shift (employed), at a meeting, resting,
+     * scared, in a raid, playing (baby) or breeding. Such a villager does not sit, and a seated one gets back up.
+     * Walking is not checked here: a seated villager's brain keeps asking to stroll, which must not stand it up.
+     */
+
+    public static boolean isVillagerBusy(Villager v) {
+        if (v.getTradingPlayer() != null || v.isSleeping()) return true;
+        var brain = v.getBrain();
+        if (brain.isActive(Activity.REST) || brain.isActive(Activity.MEET) || brain.isActive(Activity.PANIC)
+                || brain.isActive(Activity.HIDE) || brain.isActive(Activity.RAID) || brain.isActive(Activity.PRE_RAID)
+                || brain.isActive(Activity.PLAY)) {
+            return true;
+        }
+        // On shift: only a villager that actually has a workstation is "doing its job".
+        if (brain.isActive(Activity.WORK) && brain.hasMemoryValue(MemoryModuleType.JOB_SITE)) return true;
+        return brain.hasMemoryValue(MemoryModuleType.BREED_TARGET);
     }
 
     private int sitTicks;
@@ -105,6 +125,8 @@ public class SittingSeat extends Entity {
     protected void positionRider(Entity passenger, MoveFunction moveFunction) {
         // Hip just above the ground: feet sit below the seat. Small sitters a bit higher.
         double offset = SMALL_SITTERS.contains(passenger.getType()) ? -0.5D : -0.65D;
+        // A baby is half the height, so its hips are half as high above its feet.
+        if (passenger instanceof net.minecraft.world.entity.LivingEntity living && living.isBaby()) offset *= 0.5D;
         moveFunction.accept(passenger, getX(), getY() + offset, getZ());
     }
 
@@ -167,6 +189,8 @@ public class SittingSeat extends Entity {
         if (!(rider instanceof Mob mob) || !mob.isAlive()) return true;
         if (mob.getLastHurtByMob() != null || mob.hurtTime > 0) return true; // hurt: up at once
         if (mob.isOnFire() || mob.isInWater()) return true;
+        // Its shift starts, a meeting is called, bedtime: back to what it normally does.
+        if (mob instanceof Villager v && sitTicks % 20 == 0 && isVillagerBusy(v)) return true;
 
         final boolean peaceful = !(mob instanceof Enemy);
         if (alertNeeded < 0) {

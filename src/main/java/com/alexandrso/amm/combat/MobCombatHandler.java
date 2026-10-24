@@ -41,6 +41,9 @@ import net.neoforged.neoforge.event.entity.EntityJoinLevelEvent;
 import net.neoforged.neoforge.event.entity.living.LivingDeathEvent;
 import net.neoforged.neoforge.event.entity.living.LivingIncomingDamageEvent;
 import net.neoforged.neoforge.event.tick.EntityTickEvent;
+import net.minecraft.sounds.SoundEvents;
+import net.minecraft.sounds.SoundSource;
+import net.minecraft.tags.DamageTypeTags;
 
 /**
  * Simple weapon AI for mobs: ANY Mob holding a blockable weapon or a shield.
@@ -99,6 +102,49 @@ public final class MobCombatHandler {
     }
 
     /**
+     * A mob with a raised shield blocks here, with no vanilla block delay: any melee hit or projectile
+     * coming from the side the mob faces is cancelled, the shield wears, and an axe knocks it out.
+     */
+    @SubscribeEvent(priority = EventPriority.HIGH)
+    static void onShieldMobHurt(LivingIncomingDamageEvent event) {
+        if (!(event.getEntity() instanceof Mob mob) || mob.level().isClientSide()) return;
+        if (!hasRaisedShield(mob)) return;
+
+        DamageSource src = event.getSource();
+        if (src.is(DamageTypeTags.BYPASSES_SHIELD)) return;
+
+        Vec3 origin = src.getSourcePosition();
+        if (origin == null && src.getEntity() != null) origin = src.getEntity().position();
+        if (origin == null) return; // no direction (fall, drowning...): a shield does not help
+
+        // The mob must face the attack: within 90 degrees of where its head looks.
+        double yaw = Math.toRadians(mob.getYHeadRot());
+        Vec3 view = new Vec3(-Math.sin(yaw), 0.0D, Math.cos(yaw));
+        Vec3 away = new Vec3(mob.getX() - origin.x, 0.0D, mob.getZ() - origin.z);
+        if (away.lengthSqr() > 1.0E-6D && away.normalize().dot(view) >= 0.0D) return;
+
+        float amount = event.getAmount();
+        event.setCanceled(true);
+
+        // Like vanilla: the shield only wears from hits of 3 or more damage.
+        if (amount >= 3.0F) {
+            EquipmentSlot slot = mob.getUsedItemHand() == InteractionHand.OFF_HAND
+                    ? EquipmentSlot.OFFHAND : EquipmentSlot.MAINHAND;
+            mob.getUseItem().hurtAndBreak(1 + (int) Math.floor(amount), mob, slot);
+        }
+
+        boolean axeHit = !src.is(DamageTypeTags.IS_PROJECTILE)
+                && src.getDirectEntity() instanceof LivingEntity attacker
+                && BlockingRules.isAxe(attacker.getMainHandItem());
+        if (axeHit) {
+            disableShield(mob); // shield down for 5 s, break sound
+        } else {
+            mob.level().playSound(null, mob.getX(), mob.getY(), mob.getZ(),
+                    SoundEvents.SHIELD_BLOCK, SoundSource.HOSTILE, 1.0F, 0.8F + mob.getRandom().nextFloat() * 0.4F);
+        }
+    }
+
+    /**
      * A mob holding a raised shield turns its head slowly (mobShieldTurnSpeedDegrees per tick),
      * whatever the AI asks - so it can be outflanked. Vanilla's shield-facing check uses the body/head direction.
      */
@@ -133,9 +179,14 @@ public final class MobCombatHandler {
 
     // ── helpers ─────────────────────────────────────────────────────────────────
 
-    /** Zombies (husk, drowned, zombie villager, piglin zombie) and giants are not smart enough to twirl a weapon. */
+    /** Mobs that never twirl a weapon: zombies and giants (not smart enough), villagers, witches and illagers. */
+    private static final Set<net.minecraft.world.entity.EntityType<?>> NO_TWIRL = Set.of(
+            EntityTypes.VILLAGER, EntityTypes.WANDERING_TRADER, EntityTypes.WITCH,
+            EntityTypes.VINDICATOR, EntityTypes.PILLAGER, EntityTypes.EVOKER, EntityTypes.ILLUSIONER);
+
     private static boolean canTwirlKind(Mob mob) {
-        return !mob.is(EntityTypeTags.ZOMBIES) && mob.getType() != EntityTypes.GIANT;
+        return !mob.is(EntityTypeTags.ZOMBIES) && mob.getType() != EntityTypes.GIANT
+                && !NO_TWIRL.contains(mob.getType());
     }
 
     private static boolean canSitNow(Mob mob) {
@@ -332,8 +383,15 @@ public final class MobCombatHandler {
             if (v.x * v.x + v.z * v.z > 0.0005D) return false;
             if (BlockingHandler.isBlocking(mob)) return false;
             // Not while a player is within the mob's detection range (it would find a target and stand right up), nor in the sun.
-            double sight = Math.max(8.0D, mob.getAttributeValue(Attributes.FOLLOW_RANGE));
-            if (mob.level().getNearestPlayer(mob, sight) != null) return false;
+            if (mob instanceof Villager villager) {
+                // A villager is peaceful: it may sit with a player in view. Not while busy, trading, or with a player right next to it.
+                if (SittingSeat.isVillagerBusy(villager)) return false;
+                if (mob.level().getNearestPlayer(mob, 3.5D) != null) return false;
+            } else {
+                // Others: not while a player is within the mob's detection range (it would find a target and stand right up).
+                double sight = Math.max(8.0D, mob.getAttributeValue(Attributes.FOLLOW_RANGE));
+                if (mob.level().getNearestPlayer(mob, sight) != null) return false;
+            }
             if (burnsInSun(mob)) return false;
             return mob.getRandom().nextInt(240) == 0;
         }
@@ -365,7 +423,7 @@ public final class MobCombatHandler {
         }
 
         private boolean canTwirl() {
-            return mob.getTarget() == null && mob.hurtTime <= 0 && mob.onGround() && !mob.isPassenger()
+            return canTwirlKind(mob) && mob.getTarget() == null && mob.hurtTime <= 0 && mob.onGround() && !mob.isPassenger()
                     && holdsTwirlItem(mob) && !BlockingHandler.isBlocking(mob);
         }
 

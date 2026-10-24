@@ -56,6 +56,21 @@ public final class BlockingRules {
                 || stack.is(TagKey.create(Registries.ITEM, Identifier.withDefaultNamespace("spears"))));
     }
 
+    /** Any axe (item tag): its hit knocks a raised shield out of the target's hands. */
+    public static boolean isAxe(ItemStack stack) {
+        return !stack.isEmpty() && stack.is(TagKey.create(Registries.ITEM, Identifier.withDefaultNamespace("axes")));
+    }
+
+    /** Any sword (item tag): the only weapon whose hit sweeps. */
+    public static boolean isSword(ItemStack stack) {
+        return !stack.isEmpty() && stack.is(TagKey.create(Registries.ITEM, Identifier.withDefaultNamespace("swords")));
+    }
+
+    /** Points a melee hit with this weapon takes off the target's weapon block chance (spears and tridents only). */
+    public static int blockPierce(ItemStack weapon) {
+        return isPolearm(weapon) ? AmmConfig.SPEAR_BLOCK_PIERCE_POINTS.get() : 0;
+    }
+
     private BlockingRules() {
     }
 

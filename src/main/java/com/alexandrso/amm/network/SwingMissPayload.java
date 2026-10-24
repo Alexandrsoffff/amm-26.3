@@ -26,6 +26,7 @@ public record SwingMissPayload() implements CustomPacketPayload {
         ctx.enqueueWork(() -> {
             RiposteHandler.swingMissed(ctx.player());
             DualHandler.comboBreak(ctx.player());
+            DualHandler.onAirSwing(ctx.player());
         });
     }
 }

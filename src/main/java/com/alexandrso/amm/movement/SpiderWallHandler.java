@@ -45,6 +45,8 @@ public final class SpiderWallHandler {
         /** Last non-null wall, kept so the render tilt can ease back out after the spider leaves. */
         public Direction renderWall;
         public int lastContactTick;
+        /** False until the first tick after the spider was created or loaded. */
+        public boolean settled;
 
         // render data
         public float progress, prevProgress; // 0 = upright, 1 = fully belly-to-wall
@@ -82,6 +84,11 @@ public final class SpiderWallHandler {
         if (!isSpider(e)) return;
         Mob spider = (Mob) e;
         Data d = getOrCreate(spider);
+
+        if (!d.settled) {
+            d.settled = true;
+            if (!spider.level().isClientSide()) freeFromBlocks(spider);
+        }
 
         if (isEligible(spider)) {
             updateWall(spider, d);
@@ -176,6 +183,30 @@ public final class SpiderWallHandler {
 
     private static boolean fits(Mob spider, AABB box) {
         return !spider.level().getBlockCollisions(spider, box.deflate(0.001D)).iterator().hasNext();
+    }
+
+    /**
+     * A spider that was saved while hugging a wall is stored with its centre shifted toward that wall, but loads with the
+     * wider upright box, which then sits inside the wall. Moves it along the smallest horizontal offset (up to 0.8 blocks)
+     * at which the upright box fits again.
+     */
+    private static void freeFromBlocks(Mob spider) {
+        AABB box = spider.getBoundingBox();
+        if (fits(spider, box)) return;
+        for (double r = 0.05D; r <= 0.8D; r += 0.05D) {
+            for (int dx = -1; dx <= 1; dx++) {
+                for (int dz = -1; dz <= 1; dz++) {
+                    if (dx == 0 && dz == 0) continue;
+                    double len = Math.sqrt(dx * dx + dz * dz);
+                    double ox = dx * r / len;
+                    double oz = dz * r / len;
+                    if (fits(spider, box.move(ox, 0.0D, oz))) {
+                        spider.setPos(spider.getX() + ox, spider.getY(), spider.getZ() + oz);
+                        return;
+                    }
+                }
+            }
+        }
     }
 
     private static void activate(Mob s, Data d, Direction wall, int now) {

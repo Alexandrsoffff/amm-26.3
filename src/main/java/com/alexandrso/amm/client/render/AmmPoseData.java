@@ -36,6 +36,8 @@ public final class AmmPoseData {
     public boolean rightMain;
     public boolean usingItem;
     public boolean busy; // gliding or riding: no tool tilt
+    /** Riding a vehicle that makes its rider sit (the sitting seat, a boat, a minecart...). */
+    public boolean seated;
     public float offhandSwing;
     public int entityId;
 
@@ -68,6 +70,7 @@ public final class AmmPoseData {
         rightMain = e.getMainArm() == HumanoidArm.RIGHT;
         usingItem = e.isUsingItem();
         busy = e.isFallFlying() || e.isPassenger();
+        seated = e.isPassenger() && e.getVehicle() != null && e.getVehicle().shouldRiderSit();
         offhandSwing = DualClientState.offhandSwingProgress(e, partial);
 
         SpiderWallHandler.Data d = SpiderWallHandler.get(e);

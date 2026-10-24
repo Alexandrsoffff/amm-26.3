@@ -31,6 +31,7 @@ public final class AmmConfig {
     public static final ModConfigSpec.BooleanValue HELD_TOOL_TILT;
     public static final ModConfigSpec.BooleanValue POLEARM_BLOCK_ENABLED;
     public static final ModConfigSpec.IntValue POLEARM_BLOCK_CHANCE;
+    public static final ModConfigSpec.IntValue SPEAR_BLOCK_PIERCE_POINTS;
 
     // ── dual style ──────────────────────────────────────────────────────────────
     public static final ModConfigSpec.BooleanValue DUAL_ENABLED;
@@ -66,6 +67,7 @@ public final class AmmConfig {
     public static final ModConfigSpec.IntValue MOB_SHIELD_TURN_SPEED_DEGREES;
     public static final ModConfigSpec.BooleanValue MOB_SPIN_ENABLED;
     public static final ModConfigSpec.BooleanValue MOB_SIT_ENABLED;
+    public static final ModConfigSpec.BooleanValue MOB_DUAL_STRIKE_ENABLED;
     public static final ModConfigSpec.BooleanValue WOUNDED_ZOMBIE_ENABLED;
     public static final ModConfigSpec.IntValue WOUNDED_MERCY_CHANCE_PERCENT;
     public static final ModConfigSpec.DoubleValue WOUNDED_HEALTH;
@@ -159,6 +161,8 @@ public final class AmmConfig {
                 .define("polearmBlockEnabled", true);
         POLEARM_BLOCK_CHANCE = B.comment("Block chance (0-100) of spears and the trident (overridden by itemChances).")
                 .defineInRange("polearmBlockChance", 95, 0, 100);
+        SPEAR_BLOCK_PIERCE_POINTS = B.comment("A spear/trident hit lowers the target's weapon block chance by this many points (80 -> 50 with 30).")
+                .defineInRange("spearBlockPiercePoints", 30, 0, 100);
         CUSTOM_SHIELDS = B.comment("Extra shield items besides minecraft:shield, format modid:item.")
                 .defineListAllowEmpty("customShields", List.of(), () -> "", AmmConfig::isString);
         BLACKLIST = B.comment("Items removed from blocking AND dual style, format modid:item (e.g. minecraft:iron_axe).")
@@ -243,6 +247,8 @@ public final class AmmConfig {
                 .define("mobSpinEnabled", true);
         MOB_SIT_ENABLED = B.comment("Idle skeletons, illagers, villagers, witches sometimes sit down (never zombies).")
                 .define("mobSitEnabled", true);
+        MOB_DUAL_STRIKE_ENABLED = B.comment("Mobs holding a blockable weapon in BOTH hands follow every main-hand attack with a delayed off-hand strike (same rules as the player's dual style).")
+                .define("mobDualStrikeEnabled", true);
         WOUNDED_ZOMBIE_ENABLED = B.comment("Mercy save: a lethal hit on an adult zombie sometimes leaves it crawling at low health instead (once per zombie, ever).")
                 .define("woundedZombieEnabled", true);
         WOUNDED_MERCY_CHANCE_PERCENT = B.comment("Chance (percent) of the mercy save.").defineInRange("woundedMercyChancePercent", 65, 0, 100);

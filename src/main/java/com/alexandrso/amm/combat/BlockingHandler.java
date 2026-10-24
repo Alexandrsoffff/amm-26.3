@@ -189,6 +189,11 @@ public final class BlockingHandler {
             }
         }
 
+        // A spear in the attacker's hand cuts through part of the guard.
+        if (melee && source.getEntity() instanceof LivingEntity attacker) {
+            chance = Math.max(0, chance - BlockingRules.blockPierce(attacker.getMainHandItem()));
+        }
+
         float damage = event.getAmount();
         boolean success = player.getRandom().nextInt(100) < chance;
 

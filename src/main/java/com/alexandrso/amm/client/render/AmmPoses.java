@@ -1,9 +1,16 @@
 package com.alexandrso.amm.client.render;
 
+import java.util.concurrent.atomic.AtomicBoolean;
+
+import org.slf4j.Logger;
+
 import com.alexandrso.amm.config.AmmConfig;
+import com.mojang.logging.LogUtils;
 
 import net.minecraft.client.model.HumanoidModel;
+import net.minecraft.client.model.geom.ModelPart;
 import net.minecraft.client.renderer.entity.state.HumanoidRenderState;
+import net.minecraft.client.renderer.entity.state.LivingEntityRenderState;
 import net.minecraft.util.Mth;
 
 /**
@@ -16,6 +23,13 @@ public final class AmmPoses {
     private static final float DUAL_GUARD_PITCH = -0.85F;
     private static final float DUAL_GUARD_YAW = 0.65F;
     private static final float TOOL_TILT = 0.3F;
+    private static final Logger LOG = LogUtils.getLogger();
+    private static final AtomicBoolean SIT_LOGGED = new AtomicBoolean();
+
+    // Sitting leg pose: the same angles vanilla uses for a humanoid riding a vehicle.
+    private static final float SIT_LEG_PITCH = -1.4137167F;
+    private static final float SIT_LEG_SPREAD = 0.31415927F;
+    private static final float SIT_LEG_ROLL = 0.07853982F;
 
     // wounded zombie
     public static final float FOLD_DEGREES = 45.0F;
@@ -46,7 +60,7 @@ public final class AmmPoses {
             wallClimb(m, d, s);
             whole = true;
         } else if (d.spinning) {
-            spin(m, d, s);
+            spin(m.head, m.body, m.rightArm, m.leftArm, d, s);
             headTouched = d.dual;
             whole = true;
         } else if (d.pointing) {
@@ -55,7 +69,7 @@ public final class AmmPoses {
         }
 
         if (d.blocking) {
-            guard(m, d);
+            guard(m.rightArm, m.leftArm, d);
         } else if (!whole) {
             toolTilt(m, d, s);
             dualSwing(m, d);
@@ -85,24 +99,78 @@ public final class AmmPoses {
         m.head.xRot = -0.3F;
     }
 
+    // ── models that are not a HumanoidModel (villager, witch, illager) ──────────
+
+    /** Bends the legs forward into a sitting pose when the entity rides a seat. Used by the villager-like models, which have no riding pose of their own. */
+    public static void applySitting(ModelPart root, AmmPoseData d, String label) {
+        if (!d.seated) return;
+        ModelPart right = part(root, "right_leg");
+        ModelPart left = part(root, "left_leg");
+        if (right == null || left == null) return;
+        right.xRot = SIT_LEG_PITCH;
+        right.yRot = SIT_LEG_SPREAD;
+        right.zRot = SIT_LEG_ROLL;
+        left.xRot = SIT_LEG_PITCH;
+        left.yRot = -SIT_LEG_SPREAD;
+        left.zRot = -SIT_LEG_ROLL;
+        if (SIT_LOGGED.compareAndSet(false, true)) LOG.info("[amm] sitting leg pose is active on {}", label);
+    }
+
+    /**
+     * Illager guard / twirl. The illager model hides its two separate arms while it shows the crossed-arms
+     * part, so a pose written to the separate arms would be invisible: here the crossed part is hidden and the
+     * separate arms are shown first. Illagers already swing both arms in vanilla's attack pose, so no off-hand swing is added.
+     */
+    /**
+     * Illager weapon guard. The illager model hides its two separate arms while it shows the crossed-arms
+     * part, so a pose written to the separate arms would be invisible: here the crossed part is hidden and the
+     * separate arms are shown first. Illagers already swing both arms in vanilla's attack pose, so no off-hand swing is added.
+     */
+    public static void applyIllager(ModelPart root, AmmPoseData d, LivingEntityRenderState s) {
+        boolean guarding = d.blocking && !d.hasShield && (d.mainCanBlock || d.offCanBlock);
+        if (!guarding) return;
+
+        ModelPart rightArm = part(root, "right_arm");
+        ModelPart leftArm = part(root, "left_arm");
+        if (rightArm == null || leftArm == null) return;
+
+        ModelPart crossed = part(root, "arms");
+        if (crossed != null) crossed.visible = false;
+        rightArm.visible = true;
+        leftArm.visible = true;
+
+        guard(rightArm, leftArm, d);
+    }
+
+    /** Child part by name, or null when the model has no such part. */
+    private static ModelPart part(ModelPart root, String name) {
+        try {
+            return root.getChild(name);
+        } catch (RuntimeException e) {
+            return null;
+        }
+    }
+
     // ── gestures ────────────────────────────────────────────────────────────────
 
-    private static void spin(HumanoidModel<?> m, AmmPoseData d, HumanoidRenderState s) {
+    /** Weapon twirl. Dual: both arms circle in opposite phase with a small body twist. Single: only the main arm circles. Head and body may be null for models that lack them. */
+    private static void spin(ModelPart head, ModelPart body, ModelPart rightArm, ModelPart leftArm,
+            AmmPoseData d, LivingEntityRenderState s) {
         if (d.dual) {
             float t = s.ageInTicks * 0.32F;
-            m.rightArm.xRot = -1.1F + Mth.cos(t);
-            m.rightArm.yRot = -0.45F;
-            m.rightArm.zRot = -0.25F + Mth.sin(t) * 0.9F;
-            m.leftArm.xRot = -1.1F + Mth.cos(t + Mth.PI);
-            m.leftArm.yRot = 0.45F;
-            m.leftArm.zRot = 0.25F - Mth.sin(t + Mth.PI) * 0.9F;
+            rightArm.xRot = -1.1F + Mth.cos(t);
+            rightArm.yRot = -0.45F;
+            rightArm.zRot = -0.25F + Mth.sin(t) * 0.9F;
+            leftArm.xRot = -1.1F + Mth.cos(t + Mth.PI);
+            leftArm.yRot = 0.45F;
+            leftArm.zRot = 0.25F - Mth.sin(t + Mth.PI) * 0.9F;
             float twist = Mth.sin(t) * 0.18F; // small counter-twist: reads as a flourish
-            m.body.yRot = twist;
-            m.head.yRot += twist * 0.5F;
+            if (body != null) body.yRot = twist;
+            if (head != null) head.yRot += twist * 0.5F;
             return;
         }
         float t = s.ageInTicks * 0.3F;
-        var arm = d.rightMain ? m.rightArm : m.leftArm;
+        var arm = d.rightMain ? rightArm : leftArm;
         arm.xRot = -0.7F + Mth.cos(t) * 1.1F;
         arm.yRot = 0.0F;
         arm.zRot = Mth.sin(t) * 1.1F;
@@ -120,22 +188,22 @@ public final class AmmPoses {
 
     // ── combat ──────────────────────────────────────────────────────────────────
     /** Raised weapon guard. Players: old-style sword block; polearms: two-handed, shaft horizontal; mobs: slightly lower. Shields use vanilla's own pose. */
-    private static void guard(HumanoidModel<?> m, AmmPoseData d) {
+    private static void guard(ModelPart rightArm, ModelPart leftArm, AmmPoseData d) {
         if (d.hasShield) return;
 
         if (d.mainCanBlock && d.offCanBlock && d.dual) {
-            m.rightArm.xRot = DUAL_GUARD_PITCH + 0.08F;
-            m.rightArm.yRot = -DUAL_GUARD_YAW;
-            m.rightArm.zRot = 0.0F;
-            m.leftArm.xRot = DUAL_GUARD_PITCH - 0.08F;
-            m.leftArm.yRot = DUAL_GUARD_YAW;
-            m.leftArm.zRot = 0.0F;
+            rightArm.xRot = DUAL_GUARD_PITCH + 0.08F;
+            rightArm.yRot = -DUAL_GUARD_YAW;
+            rightArm.zRot = 0.0F;
+            leftArm.xRot = DUAL_GUARD_PITCH - 0.08F;
+            leftArm.yRot = DUAL_GUARD_YAW;
+            leftArm.zRot = 0.0F;
         } else if (d.guardPolearm) {
             // Spear / trident held across the chest: both arms raised forward and slightly inward,
             // the holding forearm twisted 90 degrees (zRot) so the shaft lies horizontally.
             boolean holdRight = (d.polearmInMain == d.rightMain);
-            var hold = holdRight ? m.rightArm : m.leftArm;
-            var help = holdRight ? m.leftArm : m.rightArm;
+            var hold = holdRight ? rightArm : leftArm;
+            var help = holdRight ? leftArm : rightArm;
             float in = holdRight ? -1.0F : 1.0F;      // sign that turns the HOLDING arm toward the body centre
 
             hold.xRot = -1.40F;                        // raised forward
@@ -147,7 +215,7 @@ public final class AmmPoses {
             help.zRot = -in * 1.55F;
         } else if (d.mainCanBlock || d.offCanBlock) {
             boolean withRight = (d.mainCanBlock == d.rightMain);
-            var arm = withRight ? m.rightArm : m.leftArm;
+            var arm = withRight ? rightArm : leftArm;
             if (d.isPlayer) {
                 arm.xRot = arm.xRot * 0.5F - 0.9424779F;
                 arm.yRot = (withRight ? -1.0F : 1.0F) * Mth.PI / 6.0F;
